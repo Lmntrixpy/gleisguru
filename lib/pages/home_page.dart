@@ -1,7 +1,10 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:gleisguru/models/api.dart';
 import 'package:gleisguru/services/api_service.dart';
+
+import 'home_page_layout.dart';
 import 'settings_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -19,6 +22,13 @@ class _HomePageState extends State<HomePage> {
   bool _connectionLost = false;
   bool _loading = true;
 
+  final List<double> _speedHistory = [];
+  final List<double> _temperatureHistory = [];
+  final List<double> _batteryHistory = [];
+  final List<double> _voltageHistory = [];
+
+  static const int _maxHistoryPoints = 30;
+
   @override
   void initState() {
     super.initState();
@@ -35,6 +45,11 @@ class _HomePageState extends State<HomePage> {
         _data = result;
         _connectionLost = false;
         _loading = false;
+
+        _addHistoryValue(_speedHistory, result.vReal);
+        _addHistoryValue(_temperatureHistory, result.temperatureC);
+        _addHistoryValue(_batteryHistory, result.batteryPercent);
+        _addHistoryValue(_voltageHistory, result.voltage);
       });
     } catch (_) {
       if (!mounted) return;
@@ -42,6 +57,14 @@ class _HomePageState extends State<HomePage> {
         _connectionLost = true;
         _loading = false;
       });
+    }
+  }
+
+  void _addHistoryValue(List<double> history, double? value) {
+    if (value == null) return;
+    history.add(value);
+    if (history.length > _maxHistoryPoints) {
+      history.removeAt(0);
     }
   }
 
@@ -111,133 +134,45 @@ class _HomePageState extends State<HomePage> {
     final distanceUnit = _distanceUnit(_data?.distance);
 
     final items = [
-      _DataItem('Modellgeschwindigkeit [cm/s]', _formatValue(_data?.vMod, 1)),
-      _DataItem('Realgeschwindigkeit [km/h]', _formatValue(_data?.vReal, 1)),
-      _DataItem('Maximalgeschwindigkeit [km/h]', _formatValue(_data?.vMax, 1),
-          resetKey: 'v_max'),
-      _DataItem('Durchschnitt [km/h]', _formatValue(_data?.vAverage, 1),
-          resetKey: 'v_average'),
-      _DataItem('Strecke [$distanceUnit]', _formatDistanceValue(_data?.distance),
-          resetKey: 'distance'),
-      _DataItem('Steigung [%]', _formatValue(_data?.slopePct, 0)),
-      _DataItem('Neigung [°]', _formatValue(_data?.inclinationDeg, 0)),
-      _DataItem('Temperatur [°C]', _formatValue(_data?.temperatureC, 1)),
-      _DataItem('Luftdruck [hPa]', _formatValue(_data?.pressureHpa, 1)),
-      _DataItem('Feuchte [%]', _formatValue(_data?.humidityPct, 1)),
-      _DataItem('Schienenspannung [V]', _formatValue(_data?.voltage, 2)),
-      _DataItem('Akkustand [%]', _formatValue(_data?.batteryPercent, 0)),
+      DataItem('Modellgeschwindigkeit', '${_formatValue(_data?.vMod, 1)} cm/s'),
+      DataItem('Realgeschwindigkeit', '${_formatValue(_data?.vReal, 1)} km/h'),
+      DataItem(
+        'Maximalgeschwindigkeit',
+        '${_formatValue(_data?.vMax, 1)} km/h',
+        resetKey: 'v_max',
+      ),
+      DataItem(
+        'Durchschnitt',
+        '${_formatValue(_data?.vAverage, 1)} km/h',
+        resetKey: 'v_average',
+      ),
+      DataItem(
+        'Strecke',
+        '${_formatDistanceValue(_data?.distance)} $distanceUnit',
+        resetKey: 'distance',
+      ),
+      DataItem('Steigung', '${_formatValue(_data?.slopePct, 0)} %'),
+      DataItem('Neigung', '${_formatValue(_data?.inclinationDeg, 0)} °'),
+      DataItem('Temperatur', '${_formatValue(_data?.temperatureC, 1)} °C'),
+      DataItem('Luftdruck', '${_formatValue(_data?.pressureHpa, 1)} hPa'),
+      DataItem('Feuchte', '${_formatValue(_data?.humidityPct, 1)} %'),
+      DataItem('Schienenspannung', '${_formatValue(_data?.voltage, 2)} V'),
+      DataItem('Akkustand', '${_formatValue(_data?.batteryPercent, 0)} %'),
     ];
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Gleis-Guru'),
-        actions: [
-          IconButton(
-            onPressed: _openSettings,
-            icon: const Icon(Icons.settings),
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: _loadData,
-            child: GridView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: items.length + 1,
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 320,
-                mainAxisExtent: 165,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-              ),
-              itemBuilder: (context, index) {
-                if (index == items.length) {
-                  return Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: double.infinity,
-                            child: FilledButton(
-                              onPressed: _resetAll,
-                              child: const Text('Reset All'),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton(
-                              onPressed: _loadData,
-                              child: const Text('Aktualisieren'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                final item = items[index];
-                return Card(
-                  elevation: 2,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          item.title,
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const Spacer(),
-                        Text(
-                          item.value,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.headlineMedium,
-                        ),
-                        const Spacer(),
-                        if (item.resetKey != null)
-                          OutlinedButton(
-                            onPressed: () => _resetValue(item.resetKey!),
-                            child: const Text('Reset'),
-                          ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          if (_loading)
-            const Center(child: CircularProgressIndicator()),
-          if (_connectionLost)
-            Container(
-              color: Colors.black54,
-              alignment: Alignment.center,
-              child: Card(
-                margin: const EdgeInsets.all(24),
-                child: const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text(
-                    'Verbindung verloren',
-                    style: TextStyle(fontSize: 22, color: Colors.red),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
+    return HomePageLayout(
+      items: items,
+      data: _data,
+      loading: _loading,
+      connectionLost: _connectionLost,
+      speedHistory: _speedHistory,
+      temperatureHistory: _temperatureHistory,
+      batteryHistory: _batteryHistory,
+      voltageHistory: _voltageHistory,
+      onRefresh: _loadData,
+      onOpenSettings: _openSettings,
+      onResetAll: _resetAll,
+      onResetValue: _resetValue,
     );
   }
-}
-
-class _DataItem {
-  final String title;
-  final String value;
-  final String? resetKey;
-
-  _DataItem(this.title, this.value, {this.resetKey});
 }
