@@ -30,13 +30,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  http: ^1.6.0
-  fl_chart: ^1.1.1
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.5.4
+  http: ^1.6.0
+  fl_chart: ^1.1.1
+  inno_bundle: ^0.11.2
 
 dev_dependencies:
   flutter_test:
@@ -90,3 +91,13 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+inno_bundle:
+  id: ec8d1530-1a79-11f1-90be-c9780783f715
+  publisher: Theo
+  name: Gleis-Guru-Flutter
+  description: Gleis-Guru ist das Datenerhebungsprogramm passend zum Wagen Modellbahn Messwagen 1 H0.
+  installer_icon: inno\Gleis-Guru_icon.ico
+  admin: false
+  languages:
+    - german
